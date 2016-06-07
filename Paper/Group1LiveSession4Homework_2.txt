@@ -1,0 +1,76 @@
+# Group1 Home Work4 Live Session4
+# Manhattan Exploratory Data Analysis(EDA)
+
+require(plyr) #Tools for splitting, applying, and combining data
+#install the gdata and plyr packages and load in to R if to read .xls data. Not required if data saved as .csv.
+ library(plyr)
+ setwd("C:\\Users\\ARAYA ABADI\\Documents")
+
+# Loading RollingSalesManhattan CSV File
+  RollingSalesManhattan=read.csv("rollingsales_manhattan.csv",header = T,sep = ",",skip = 4)
+
+## Check the data
+head(RollingSalesManhattan)
+summary(RollingSalesManhattan)
+str(RollingSalesManhattan)
+
+## Process the data, clean the data, and extract relevant information 
+RollingSalesManhattan$SALE.PRICE.N <- as.numeric(gsub("[^[:digit:]]","", RollingSalesManhattan$SALE.PRICE))
+count(is.na(RollingSalesManhattan$SALE.PRICE.N))
+names(RollingSalesManhattan) <- tolower(names(RollingSalesManhattan))
+
+## Clean/format the data with regular expressions
+RollingSalesManhattan$gross.sqft <- as.numeric(gsub("[^[:digit:]]","", RollingSalesManhattan$gross.square.feet))
+RollingSalesManhattan$land.sqft <- as.numeric(gsub("[^[:digit:]]","", RollingSalesManhattan$land.square.feet))
+RollingSalesManhattan$neighborhood <- gsub("[[:space:]]*$","",RollingSalesManhattan$neighborhood)
+RollingManhattanSales$sale.date <- as.Date(RollingSalesManhattan$sale.date)
+RollingSalesManhattan$year.built <- as.numeric(as.character(RollingSalesManhattan$year.built))
+RollingSalesManhattan$total.unit.n <- as.numeric(gsub("[^[:digit:]]","",RollingSalesManhattan$total.units))
+
+## do a bit of exploration to make sure there's not anything
+## weird going on with sale prices
+attach(RollingSalesManhattan)
+hist(sale.price.n) 
+detach(RollingSalesManhattan)
+
+## keep only the actual sales
+
+RollingSalesManhattan.sale <- RollingSalesManhattan[RollingSalesManhattan$sale.price.n!=0,]
+plot(RollingSalesManhattan.sale$gross.sqft,RollingSalesManhattan.sale$sale.price.n)
+plot(log10(RollingSalesManhattan.sale$gross.sqft),log10(RollingSalesManhattan.sale$sale.price.n))
+
+## for now, let's look at 1-, 2-, and 3-family homes
+RollingSalesManhattan.homes <- RollingSalesManhattan.sale[which(grepl("FAMILY",RollingSalesManhattan.sale$building.class.category)),]
+dim(RollingSalesManhattan.homes)
+plot(log10(RollingSalesManhattan.homes$gross.sqft),log10(RollingSalesManhattan.homes$sale.price.n))
+summary(RollingSalesManhattan.homes[which(RollingSalesManhattan.homes$sale.price.n<100000),])
+
+
+## remove outliers that seem like they weren't actual sales
+RollingSalesManhattan.homes$outliers <- (log10(RollingSalesManhattan.homes$sale.price.n) <=5) + 0
+RollingSalesManhattan.homes <- RollingSalesManhattan.homes[which(RollingSalesManhattan.homes$outliers==0),]
+
+## We have gathered all the data in RollingSalesManhattan.homes piece by pice
+## It is now time for the Exploratory Data Analysis(EDA)
+1) EDA for Comparing square footage VS. sale price
+plot(RollingSalesManhattan.homes$gross.sqft),RollingSalesManhattan.homes$sale.price.n)
+plot(log(RollingSalesManhattan.homes$gross.sqft),log(RollingSalesManhattan.homes$sale.price.n))
+summary(RollingSalesManhattan.homes$sale.price.n)
+summary(RollingSalesManhattan.homes$gross.sqft)
+
+2) EDA accross neighborhood
+##SummaryN is the result of summaryBy neighborhood
+fun <- function(x){c(count = length(x), sum = sum(x), var = var(x), mean = mean(x), max = max(x), min=min(x))}
+SummaryN<-summaryBy(sale.price.n~neighborhood,data = RollingSalesManhattan.homes,FUN=fun)
+
+##The sales count for every neighborhood
+with(RollingSalesManhattan.homes, plot(main="Sales count for each neighborhood",ylab="Count", neighborhood, horizontal = FALSE, scales=list(y=list(tick.number=6, relation="same", at=c(0, 200,400,600,800, 1000,1200,1400,1600,1800,2000)),x=list(rot=90)),
+                      panel = function(x,y) {
+                        panel.plot(x,y)
+                        max.values <- max(y)
+                        median.values <- median(y)
+                        min.values <- min(y)
+                        panel.abline(h=median.values, col.line="red")
+                        panel.abline(h=max.values, col.line="blue")
+                        panel.abline(h=min.values, col.line="red") }))
+
