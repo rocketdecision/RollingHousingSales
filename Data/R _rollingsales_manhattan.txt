@@ -1,0 +1,55 @@
+# Author: Benjamin Reddy
+# Taken from pages 49-50 of O'Neil and Schutt
+
+require(plyr) #Added by Monnie McGee
+#install the gdata and plyr packages and load in to R.
+library(plyr)
+setwd("/Users/thisi/OneDrive/Education/Grad School/Course Materials/MSDS 6306 - Doing Data Science/Homework & Assignments/Live Session 4 Assignment/Data")
+
+# Loading RollingSalesManhattan CSV File
+# Variable bk changed to RollingSalesManhattan to reflect naming scheme of the dataset (Changed by Brian Lee)
+RollingSalesManhattan = read.csv("rollingsales_manhattan.csv", header=T, sep=",", skip=4)
+
+## Check the data
+head(RollingSalesManhattan)
+summary(RollingSalesManhattan)
+str(RollingSalesManhattan) # Very handy function!
+
+## clean/format the data with regular expressions
+## More on these later. For now, know that the
+## pattern "[^[:digit:]]" refers to members of the variable name that
+## start with digits. We use the gsub command to replace them with a blank space.
+# We create a new variable that is a "clean' version of sale.price.
+# And sale.price.n is numeric, not a factor.
+RollingSalesManhattan$SALE.PRICE.N <- as.numeric(gsub("[^[:digit:]]","", RollingSalesManhattan$SALE.PRICE))
+count(is.na(RollingSalesManhattan$SALE.PRICE.N))
+
+names(RollingSalesManhattan) <- tolower(names(RollingSalesManhattan)) # make all variable names lower case
+## Get rid of leading digits
+RollingSalesManhattan$gross.sqft <- as.numeric(gsub("[^[:digit:]]","", RollingSalesManhattan$gross.square.feet))
+RollingSalesManhattan$land.sqft <- as.numeric(gsub("[^[:digit:]]","", RollingSalesManhattan$land.square.feet))
+RollingSalesManhattan$year.built <- as.numeric(as.character(RollingSalesManhattan$year.built))
+
+## do a bit of exploration to make sure there's not anything
+## weird going on with sale prices
+attach(RollingSalesManhattan)
+hist(sale.price.n) 
+detach(RollingSalesManhattan)
+
+## keep only the actual sales
+
+RollingSalesManhattan.sale <- RollingSalesManhattan[RollingSalesManhattan$sale.price.n!=0,]
+plot(RollingSalesManhattan.sale$gross.sqft,RollingSalesManhattan.sale$sale.price.n)
+plot(log10(RollingSalesManhattan.sale$gross.sqft),log10(RollingSalesManhattan.sale$sale.price.n))
+
+## for now, let's look at 1-, 2-, and 3-family homes
+RollingSalesManhattan.homes <- RollingSalesManhattan.sale[which(grepl("FAMILY",RollingSalesManhattan.sale$building.class.category)),]
+dim(RollingSalesManhattan.homes)
+plot(log10(RollingSalesManhattan.homes$gross.sqft),log10(RollingSalesManhattan.homes$sale.price.n))
+summary(RollingSalesManhattan.homes[which(RollingSalesManhattan.homes$sale.price.n<100000),])
+
+
+## remove outliers that seem like they weren't actual sales
+RollingSalesManhattan.homes$outliers <- (log10(RollingSalesManhattan.homes$sale.price.n) <=5) + 0
+RollingSalesManhattan.homes <- RollingSalesManhattan.homes[which(RollingSalesManhattan.homes$outliers==0),]
+plot(log(RollingSalesManhattan.homes$gross.sqft),log(RollingSalesManhattan.homes$sale.price.n))
